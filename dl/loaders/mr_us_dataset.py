@@ -71,6 +71,7 @@ class MRDatasetVolumes(Dataset):
         self.mount_point = mount_point        
         self.transform = transform
         self.img_column = img_column
+        self.key = key
         
 
     def __len__(self):
@@ -79,6 +80,7 @@ class MRDatasetVolumes(Dataset):
     def __getitem__(self, idx):
         
         img_path = os.path.join(self.mount_point, self.df.iloc[idx][self.img_column])
+        
         return self.transform(img_path)
 
 class VolumeSlicingProbeParamsDataset(Dataset):

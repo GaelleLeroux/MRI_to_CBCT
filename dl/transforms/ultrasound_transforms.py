@@ -910,6 +910,7 @@ class LotusTrainTransforms:
         # image augmentation functions
         self.train_transform = Compose(
             [   
+                LoadImaged(keys=['img_mri', 'img_cbct']),
                 EnsureChannelFirstd(keys=['img', 'seg'], channel_dim=-1),
                 ToTensord(keys=['img', 'seg']),
                 Resized(keys=['img', 'seg'], spatial_size=(height, height), mode=['bilinear', 'nearest']),
