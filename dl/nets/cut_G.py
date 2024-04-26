@@ -10,21 +10,21 @@ class Generator(nn.Module):
         super().__init__()
 
         layers = [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(in_channels, features, kernel_size=7),
-            nn.InstanceNorm2d(features),
+            nn.ReplicationPad3d(3),
+            nn.Conv3d(in_channels, features, kernel_size=7),
+            nn.InstanceNorm3d(features),
             nn.ReLU(True)
         ]
         features_prev = features
         for i in range(2):
             features *= 2
             layers += [
-                nn.Conv2d(features_prev, features, kernel_size=3, stride=1, padding=1),
-                nn.InstanceNorm2d(features),
+                nn.Conv3d(features_prev, features, kernel_size=3, stride=1, padding=1),
+                nn.InstanceNorm3d(features),
                 nn.ReLU(True),
                 Downsample(features)
-                # nn.ReflectionPad2d(1),
-                # nn.Conv2d(features, features, kernel_size=3, stride=2)
+                # nn.ReplicationPad3d(1),
+                # nn.Conv3d(features, features, kernel_size=3, stride=2)
             ]
             features_prev = features
         for i in range(residuals):
@@ -35,14 +35,14 @@ class Generator(nn.Module):
                 # nn.ReplicationPad2d(1),
                 # nn.ConvTranspose2d(features_prev, features_prev, kernel_size=4, stride=2, padding=3),
                 Upsample(features_prev),
-                nn.Conv2d(features_prev, features, kernel_size=3, stride=1, padding=1),
-                nn.InstanceNorm2d(features),
+                nn.Conv3d(features_prev, features, kernel_size=3, stride=1, padding=1),
+                nn.InstanceNorm3d(features),
                 nn.ReLU(True)
             ]
             features_prev = features
         layers += [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(features_prev, in_channels, kernel_size=7),
+            nn.ReplicationPad3d(3),
+            nn.Conv3d(features_prev, in_channels, kernel_size=7),
             nn.Tanh(),
         ]
         self.model = nn.Sequential(*layers)

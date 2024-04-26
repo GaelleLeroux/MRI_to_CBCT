@@ -6,7 +6,7 @@ class Discriminator(nn.Module):
     def __init__(self, in_channels=1, features=64):
         super().__init__()
         layers = [
-            nn.Conv2d(in_channels, features, kernel_size=4, stride=1, padding=1),
+            nn.Conv3d(in_channels, features, kernel_size=4, stride=1, padding=1),
             nn.LeakyReLU(0.2, True),
             Downsample(features)
             # nn.ReflectionPad2d(1),
@@ -16,8 +16,8 @@ class Discriminator(nn.Module):
         for i in range(3):
             features *= 2
             layers += [
-                nn.Conv2d(features_prev, features, kernel_size=4, stride=1, padding=1),
-                nn.InstanceNorm2d(features),
+                nn.Conv3d(features_prev, features, kernel_size=4, stride=1, padding=1),
+                nn.InstanceNorm3d(features),
                 nn.LeakyReLU(0.2, True)
             ]
             features_prev = features
@@ -29,7 +29,7 @@ class Discriminator(nn.Module):
                 ]
         features = 1
         layers += [
-            nn.Conv2d(features_prev, features, kernel_size=4, stride=1, padding=1)
+            nn.Conv3d(features_prev, features, kernel_size=4, stride=1, padding=1)
         ]
         self.model = nn.Sequential(*layers)
 

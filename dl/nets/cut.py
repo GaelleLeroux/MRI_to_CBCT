@@ -5,11 +5,10 @@ from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch import nn
 
-from generative.networks import nets as MNets
+# from generative.networks import nets as MNets
 from nets.cut_D import Discriminator
 from nets.cut_G import Generator
 from nets.cut_P import Head
-from nets.lotus import UltrasoundRendering, UltrasoundRenderingLinear, UltrasoundRenderingConv1d
 
 import pytorch_lightning as pl
 import os
@@ -25,18 +24,6 @@ class Cut(pl.LightningModule):
         
         self.D_Y = Discriminator()
 
-        self.USR = UltrasoundRendering(**kwargs)
-
-        if hasattr(self.hparams, 'use_pre_trained_lotus') and self.hparams.use_pre_trained_lotus and os.path.exists('train_output/ultra-sim/rendering/v0.1/epoch=199-val_loss=0.04.ckpt'):
-            usr = UltrasoundRendering.load_from_checkpoint('train_output/ultra-sim/rendering/v0.1/epoch=199-val_loss=0.04.ckpt')        
-            
-            
-            self.USR.acoustic_impedance_dict = usr.acoustic_impedance_dict
-            self.USR.attenuation_dict = usr.attenuation_dict
-            self.USR.mu_0_dict = usr.mu_0_dict
-            self.USR.mu_1_dict = usr.mu_1_dict
-            self.USR.sigma_0_dict = usr.sigma_0_dict
-
         self.G = Generator()
         self.H = Head()
 
@@ -44,18 +31,13 @@ class Cut(pl.LightningModule):
         self.mse = nn.MSELoss()
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction='none')
 
-        # lambda_lr = lambda epoch: 1.0 - max(0, epoch - config.NUM_EPOCHS / 2) / (config.NUM_EPOCHS / 2)
-        # self.scheduler_disc = lr_scheduler.LambdaLR(self.opt_disc, lr_lambda=lambda_lr)
-        # self.scheduler_gen = lr_scheduler.LambdaLR(self.opt_gen, lr_lambda=lambda_lr)
-        # self.scheduler_mlp = lr_scheduler.LambdaLR(self.opt_head, lr_lambda=lambda_lr)
 
         self.automatic_optimization = False
 
-        self.transform_us = T.Compose([T.Pad((0, 80, 0, 0)), T.CenterCrop(256)])
 
     def configure_optimizers(self):
         opt_gen = optim.AdamW(
-            list(self.USR.parameters()) + list(self.G.parameters()),
+            self.G.parameters(),
             lr=self.hparams.lr,
             betas=self.hparams.betas,
             weight_decay=self.hparams.weight_decay            
@@ -75,17 +57,9 @@ class Cut(pl.LightningModule):
 
         return [opt_gen, opt_disc, opt_head]
     
-    # This is only called during inference time to set a custom grid
-    def init_grid(self, w, h, center_x, center_y, r1, r2, theta):
-        grid = self.USR.compute_grid(w, h, center_x, center_y, r1, r2, theta)
-        inverse_grid, mask = self.USR.compute_grid_inverse(grid)
-        
-        self.USR.grid = self.USR.normalize_grid(grid)
-        self.USR.inverse_grid = self.USR.normalize_grid(inverse_grid)
-        self.USR.mask_fan = mask
 
     def forward(self, X):
-        return self.G(self.transform_us(self.USR(X)))*self.transform_us(self.USR.mask_fan).to(self.device)
+        return self.G(X)
 
     # def scheduler_step(self):
     #     self.scheduler_disc.step()
@@ -105,70 +79,17 @@ class Cut(pl.LightningModule):
                 for param in net.parameters():
                     param.requires_grad = requires_grad
 
-    def on_train_start(self):
 
-        # Define the file names directly without using out_dir
-        grid_t_file = 'grid_t.pt'
-        inverse_grid_t_file = 'inverse_grid_t.pt'
-        mask_fan_t_file = 'mask_fan_t.pt'
-
-        if self.hparams.create_grids or not os.path.exists(grid_t_file):
-            grid_tensor = []
-            inverse_grid_t = []
-            mask_fan_t = []
-
-            for i in range(self.hparams.n_grids):
-
-                grid_w, grid_h = self.hparams.grid_w, self.hparams.grid_h
-                center_x = self.hparams.center_x
-                r1 = self.hparams.r1
-
-                center_y = self.hparams.center_y_start + (self.hparams.center_y_end - self.hparams.center_y_start) * (torch.rand(1))
-                r2 = self.hparams.r2_start + ((self.hparams.r2_end - self.hparams.r2_start) * torch.rand(1)).item()
-                theta = self.hparams.theta_start + ((self.hparams.theta_end - self.hparams.theta_start) * torch.rand(1)).item()
-                
-                grid, inverse_grid, mask = self.USR.init_grids(grid_w, grid_h, center_x, center_y, r1, r2, theta)
-
-                grid_tensor.append(grid.unsqueeze(dim=0))
-                inverse_grid_t.append(inverse_grid.unsqueeze(dim=0))
-                mask_fan_t.append(mask.unsqueeze(dim=0))
-
-            self.grid_t = torch.cat(grid_tensor).to(self.device)
-            self.inverse_grid_t = torch.cat(inverse_grid_t).to(self.device)
-            self.mask_fan_t = torch.cat(mask_fan_t).to(self.device)
-
-            # Save tensors directly to the current directory
-            
-            torch.save(self.grid_t, grid_t_file)
-            torch.save(self.inverse_grid_t, inverse_grid_t_file)
-            torch.save(self.mask_fan_t, mask_fan_t_file)
-
-            # print("Grids SAVED!")
-            # print(self.grid_t.shape, self.inverse_grid_t.shape, self.mask_fan_t.shape)
-        
-        else:
-            # Load tensors directly from the current directory
-            self.grid_t = torch.load(grid_t_file).to(self.device)
-            self.inverse_grid_t = torch.load(inverse_grid_t_file).to(self.device)
-            self.mask_fan_t = torch.load(mask_fan_t_file).to(self.device)
 
     def training_step(self, train_batch, batch_idx):
 
         # Y is the real ultrasound
-        labeled, Y = train_batch
-        X_x = labeled['img']
-        X_s = labeled['seg']        
+        X, Y = train_batch
+   
 
         opt_gen, opt_disc, opt_head = self.optimizers()
 
-        grid_idx = torch.randint(low=0, high=self.hparams.n_grids - 1, size=(X_s.shape[0],))
         
-        grid = self.grid_t[grid_idx]
-        inverse_grid = self.inverse_grid_t[grid_idx]
-        mask_fan = self.mask_fan_t[grid_idx]
-
-        X_ = self.USR(X_s, grid=grid, inverse_grid=inverse_grid, mask_fan=mask_fan)
-        X = self.transform_us(X_)
         Y_fake = self.G(X)
 
         Y_idt = None
@@ -201,12 +122,8 @@ class Cut(pl.LightningModule):
 
     def validation_step(self, val_batch, batch_idx):
 
-        labeled, Y = val_batch
-        X_x = labeled['img']
-        X_s = labeled['seg']
-
-        X_ = self.USR(X_s)
-        X = self.transform_us(X_)
+        X, Y = val_batch
+        
         Y_fake = self.G(X)
 
         Y_idt = None
