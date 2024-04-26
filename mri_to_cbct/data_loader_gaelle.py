@@ -3,12 +3,13 @@ import pandas as pd
 import numpy as np
 import SimpleITK as sitk
 from PIL import Image
-import nrrd
+# import nrrd
 import os
 import sys
 import torch
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
+import monai
 
 
 import pytorch_lightning as pl
