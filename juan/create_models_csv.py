@@ -7,7 +7,7 @@ def main(args):
 
     df = []	
 
-    for f in Path(args.dir).rglob('*.nrrd'):    	
+    for f in Path(args.dir).rglob('*.nii'):    	
 
         f = str(f)
         img_fn = f.replace(os.path.normpath(args.dir) + '/', '')
