@@ -10,11 +10,35 @@ import torch
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 import monai
-
+from monai.transforms import (  
+    LoadImaged,
+    Compose,
+    Resize,
+    RandZoomd,
+    RandRotated,
+    RandAffined,
+    ToTensord
+)   
+import math
 
 import pytorch_lightning as pl
     
-    
+class LotusTrainTransforms2:
+    def __init__(self, height: int = 256):
+
+        # image augmentation functions
+        self.train_transform = Compose(
+            [   
+            LoadImaged(keys=['img_mri', 'img_cbct']),
+            RandZoomd(keys=['img_mri', 'img_cbct'], min_zoom=0.8, max_zoom=1.1, mode=['area', 'nearest'], prob=0.9, padding_mode='constant'),
+            RandRotated(keys=['img_mri', 'img_cbct'], range_x=math.pi, mode=['bilinear', 'nearest'], prob=1.0),
+            RandAffined(keys=['img_mri', 'img_cbct'], prob=0.8, shear_range=(0.1, 0.1), mode=['bilinear', 'nearest'], padding_mode='zeros'),
+            ToTensord(keys=['img_mri', 'img_cbct'])
+            ]
+        )
+
+    def __call__(self, inp):
+        return self.train_transform(inp) 
 
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets, use_max=True):
@@ -110,6 +134,27 @@ class ImageDataset(Dataset):
         #     image = self.transform(image)
         # return image
         return self.eval_transform(idx)  
+    
+class LotusTrainTransforms:
+    def __init__(self, height: int = 256):
+
+        # image augmentation functions
+        self.train_transform = Compose(
+            [   
+            # EnsureChannelFirstd(keys=['img', 'seg'], channel_dim=-1),
+            LoadImaged(keys=['img_mri', 'img_cbct']),
+            RandZoomd(keys=['img_mri', 'img_cbct'], min_zoom=0.8, max_zoom=1.1, mode=['area', 'nearest'], prob=0.9, padding_mode='constant'),
+            RandRotated(keys=['img_mri', 'img_cbct'], range_x=math.pi, mode=['bilinear', 'nearest'], prob=1.0),
+            RandAffined(keys=['img_mri', 'img_cbct'], prob=0.8, shear_range=(0.1, 0.1), mode=['bilinear', 'nearest'], padding_mode='zeros'),
+            ToTensord(keys=['img_mri', 'img_cbct'])
+            ]
+
+            )
+
+    def __call__(self, inp):
+        return self.train_transform(inp) 
+    
+
     
     
 class LotusDataModule(pl.LightningDataModule):
