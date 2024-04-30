@@ -36,23 +36,27 @@ class Cut(pl.LightningModule):
 
 
     def configure_optimizers(self):
+        lr = getattr(self.hparams, 'lr', 0.0002)
+        betas = getattr(self.hparams, 'betas', (0.5, 0.999))
+        weight_decay = getattr(self.hparams, 'weight_decay', 0.0001)
+        
         opt_gen = optim.AdamW(
             self.G.parameters(),
-            lr=self.hparams.lr,
-            betas=self.hparams.betas,
-            weight_decay=self.hparams.weight_decay            
+            lr=lr,
+            betas=betas,
+            weight_decay=weight_decay            
         )
         opt_disc = optim.AdamW(
             self.D_Y.parameters(),
-            lr=self.hparams.lr,
-            betas=self.hparams.betas,
-            weight_decay=self.hparams.weight_decay
+            lr=lr,
+            betas=betas,
+            weight_decay=weight_decay
         )        
         opt_head = optim.AdamW(
             self.H.parameters(),
-            lr=self.hparams.lr,
-            betas=self.hparams.betas,
-            weight_decay=self.hparams.weight_decay
+            lr=lr,
+            betas=betas,
+            weight_decay=weight_decay
         )
 
         return [opt_gen, opt_disc, opt_head]
