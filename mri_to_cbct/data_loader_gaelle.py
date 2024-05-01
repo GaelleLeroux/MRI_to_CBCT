@@ -158,7 +158,7 @@ class LotusTrainTransforms:
     
     
 class LotusDataModule(pl.LightningDataModule):
-    def __init__(self, df_train, df_val, df_test, mount_point="./", batch_size=256, num_workers=4, img_column="img_path", seg_column="seg_path", train_transform=None, valid_transform=None, test_transform=None, drop_last=False):
+    def __init__(self, df_train, df_val, df_test, mount_point="./", batch_size=256, num_workers=4, img_column="img_path", train_transform=None, valid_transform=None, test_transform=None, drop_last=False):
         super().__init__()
 
         self.df_train = df_train
@@ -168,7 +168,6 @@ class LotusDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.img_column = img_column        
-        self.seg_column = seg_column        
         self.train_transform = train_transform
         self.valid_transform = valid_transform
         self.test_transform = test_transform
@@ -177,9 +176,9 @@ class LotusDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
 
         # Assign train/val datasets for use in dataloaders
-        self.train_ds = monai.data.Dataset(data=LotusDataset(self.df_train, self.mount_point, img_column=self.img_column, seg_column=self.seg_column), transform=self.train_transform)
-        self.val_ds = monai.data.Dataset(data=LotusDataset(self.df_val, self.mount_point, img_column=self.img_column, seg_column=self.seg_column), transform=self.valid_transform)
-        self.test_ds = monai.data.Dataset(data=LotusDataset(self.df_test, self.mount_point, img_column=self.img_column, seg_column=self.seg_column), transform=self.test_transform)
+        self.train_ds = monai.data.Dataset(data=LotusDataset(self.df_train, self.mount_point, img_column=self.img_column), transform=self.train_transform)
+        self.val_ds = monai.data.Dataset(data=LotusDataset(self.df_val, self.mount_point, img_column=self.img_column), transform=self.valid_transform)
+        self.test_ds = monai.data.Dataset(data=LotusDataset(self.df_test, self.mount_point, img_column=self.img_column), transform=self.test_transform)
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size, num_workers=self.num_workers, persistent_workers=True, pin_memory=True, drop_last=self.drop_last, shuffle=True, prefetch_factor=2)
@@ -192,7 +191,7 @@ class LotusDataModule(pl.LightningDataModule):
     
 
 class LotusDataset(Dataset):
-    def __init__(self, df, mount_point = "./", img_column="img_path", seg_column="seg_path"):
+    def __init__(self, df, mount_point = "./", img_column="img_path", seg_column=None):
         self.df = df
         self.mount_point = mount_point
         self.img_column = img_column
@@ -206,8 +205,10 @@ class LotusDataset(Dataset):
     def __getitem__(self, idx):
         
         img_path = os.path.join(self.mount_point, self.df.iloc[idx][self.img_column])
-        seg_path = os.path.join(self.mount_point, self.df.iloc[idx][self.seg_column])
 
-        d = {"img_mri": img_path, "img_cbct": seg_path}
+        d = {"img_mri": img_path, "img_cbct": img_path}
         
-        return self.loader(d)
+        
+        d = self.loader(d)
+        
+        return d
