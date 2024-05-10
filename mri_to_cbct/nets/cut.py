@@ -17,25 +17,18 @@ from torchvision import transforms as T
 
 
 class Cut(pl.LightningModule):
-    def __init__(self, **kwargs):
+    def __init__(self, lambda_y=0.0,**kwargs):
         super().__init__()
 
         self.save_hyperparameters()
-        print("1"*25)
         self.D_Y = Discriminator()
-        print("2"*25)
-
         self.G = Generator()
-        print("3"*25)
         self.H = Head()
-        print("4"*25)
 
         self.l1 = nn.L1Loss()
-        print("5"*25)
         self.mse = nn.MSELoss()
-        print("6"*25)
+        
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction='none')
-        print("7"*25)
 
         self.automatic_optimization = False
 
@@ -95,11 +88,7 @@ class Cut(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
 
         # Y is the real ultrasound
-        print("89"*50)
         X, Y = train_batch
-        print("x shape : ", X.shape)
-        print("y shape : ", Y.shape)
-   
 
         opt_gen, opt_disc, opt_head = self.optimizers()
 
@@ -107,8 +96,11 @@ class Cut(pl.LightningModule):
         Y_fake = self.G(X)
 
         Y_idt = None
-        if self.hparams.lambda_y:
-            Y_idt = self.G(Y)           
+        # if self.hparams.lambda_y:
+        #     Y_idt = self.G(Y)      
+
+        if getattr(self.hparams, 'lambda_y', 0) > 0:
+            Y_idt = self.G(Y)     
 
         # update D
         self.set_requires_grad(self.D_Y, True)
@@ -141,8 +133,10 @@ class Cut(pl.LightningModule):
         Y_fake = self.G(X)
 
         Y_idt = None
-        if self.hparams.lambda_y:
-            Y_idt = self.G(Y)
+        # if self.hparams.lambda_y:
+        #     Y_idt = self.G(Y)
+        if getattr(self.hparams, 'lambda_y', 0) > 0:
+             Y_idt = self.G(Y)
         
         loss_G = self.compute_G_loss(X, Y, Y_fake, Y_idt)
 

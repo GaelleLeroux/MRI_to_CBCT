@@ -63,13 +63,13 @@ df_train_cbct = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/
 df_val_cbct = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/valid.csv")  
 df_test_cbct = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/test.csv")
 
-# df_train_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/train.csv")
-# df_val_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/valid.csv")   
-# df_test_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/test.csv") 
+df_train_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/train.csv")
+df_val_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/valid.csv")   
+df_test_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/test.csv") 
 
-df_train_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/train.csv") 
-df_val_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/valid.csv")  
-df_test_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/test.csv")
+# df_train_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/train.csv") 
+# df_val_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/valid.csv")  
+# df_test_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/test.csv")
 
 
 print(df_train_mri.columns)  # Affiche les noms de colonnes du DataFrame
@@ -89,8 +89,8 @@ CBCT_data.setup()
 
 train_transform_mri = LotusTrainTransforms2()
 valid_transform_mri = LotusTrainTransforms2()
-# MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
-MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
+MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
+# MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
 MRI_data.setup()
 
 concat_data = ConcatDataModule(MRI_data.train_ds, MRI_data.val_ds, CBCT_data.train_ds, CBCT_data.val_ds, batch_size=2, num_workers=4)
@@ -106,7 +106,7 @@ print("size of concat_data : ",len(concat_data.train_ds))
 ################################################################################################################################################################3
 
 checkpoint_callback = ModelCheckpoint(
-            dirpath='/home/luciacev/Documents/Gaelle/Data/MultimodelReg_2/MRI_to_CBCT/output_train/',
+            dirpath='/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/output_model/',
             filename='{epoch}-{val_loss:.2f}',
             save_top_k=2,
             monitor='val_loss'
@@ -144,8 +144,11 @@ trainer = Trainer(
     accelerator='gpu', 
     devices=torch.cuda.device_count(),
     strategy=DDPStrategy(find_unused_parameters=False),
-    reload_dataloaders_every_n_epochs=1
+    reload_dataloaders_every_n_epochs=1,
+    precision=16
     # detect_anomaly=True
 )
+
+torch.cuda.empty_cache()
 print("JE SUIS AVANT LE FIT") 
 trainer.fit(model, datamodule=concat_data)

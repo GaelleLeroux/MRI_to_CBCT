@@ -61,7 +61,9 @@ class Generator(nn.Module):
                 if layer_id in [0, 4, 8, 12, 16]:
                     # print("F1", feat.shape)
                     B, H, W = feat.shape[0], feat.shape[2], feat.shape[3]
-                    feat_reshape = feat.permute(0, 2, 3, 1).flatten(1, 2)
+                    # feat_reshape = feat.permute(0, 2, 3, 1).flatten(1, 2) # for 2d
+                    feat_permuted = feat.permute(0, 2, 3, 4, 1) # for 3d
+                    feat_reshape = feat_permuted.flatten(1, 3)
                     # print("F2", feat_reshape.shape)
                     if patch_ids is not None:
                         patch_id = patch_ids[mlp_id]
@@ -83,7 +85,7 @@ class Generator(nn.Module):
             return return_feats, return_ids
 
 def test():
-    x = torch.randn((5, 3, 256, 256)).to()
+    x = torch.randn((1, 1, 256, 256,256)).to()
     print(x.shape)
     G = Generator().to()
     feat_k_pool, sample_ids = G(x, encode_only=True, patch_ids=None)

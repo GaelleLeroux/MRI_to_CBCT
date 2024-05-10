@@ -7,9 +7,9 @@ class ResnetBlock(nn.Module):
         layers = []
         for i in range(2):
             layers += [
-                nn.ReflectionPad2d(1),
-                nn.Conv2d(features, features, kernel_size=3),
-                nn.InstanceNorm2d(features),
+                nn.ReflectionPad3d(1),
+                nn.Conv3d(features, features, kernel_size=3),
+                nn.InstanceNorm3d(features),
             ]
             if i==0:
                 layers += [

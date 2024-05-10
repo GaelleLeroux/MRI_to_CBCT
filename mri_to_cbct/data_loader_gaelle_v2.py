@@ -166,11 +166,11 @@ class LotusTrainTransforms2:
         EnsureChannelFirstd(keys=['img']),
 
         EnsureTyped(keys=['img']),
-        RandZoomd(keys=['img'], min_zoom=0.8, max_zoom=1.1, mode=['area'], prob=0.9, padding_mode='constant'),
+        RandZoomd(keys=['img'], min_zoom=0.5, max_zoom=1.2, mode=['area'], prob=0.8, padding_mode='constant'),
 
-        RandRotated(keys=['img'], range_x=np.pi, mode=['bilinear'], prob=1.0),
-        
-        RandAffined(keys=['img'], prob=0.8, shear_range=(0.1, 0.1), mode=['bilinear'], padding_mode='zeros'),
+        RandRotated(keys=['img'], range_x=np.pi/4, mode=['bilinear'], prob=1.0),
+
+        RandAffined(keys=['img'], prob=0.8, shear_range=(0.3, 0.3), mode=['bilinear'], padding_mode='zeros'),
 
         Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
 
