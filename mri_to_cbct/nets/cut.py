@@ -32,6 +32,8 @@ class Cut(pl.LightningModule):
 
         self.automatic_optimization = False
 
+        self.scaler = torch.cuda.amp.GradScaler()#add by gl
+
 
     def configure_optimizers(self):
         lr = getattr(self.hparams, 'lr', 0.0002)
@@ -86,45 +88,79 @@ class Cut(pl.LightningModule):
 
 
     def training_step(self, train_batch, batch_idx):
-
-        # Y is the real ultrasound
+         
         X, Y = train_batch
 
+        # Récupérer les optimiseurs
         opt_gen, opt_disc, opt_head = self.optimizers()
 
-        
+        # Générer les faux Y à partir de X
         Y_fake = self.G(X)
 
-        Y_idt = None
-        # if self.hparams.lambda_y:
-        #     Y_idt = self.G(Y)      
+        # Générer Y_idt si nécessaire
+        Y_idt = self.G(Y) if getattr(self.hparams, 'lambda_y', 0) > 0 else None
 
-        if getattr(self.hparams, 'lambda_y', 0) > 0:
-            Y_idt = self.G(Y)     
-
-        # update D
+        # Mise à jour de D
         self.set_requires_grad(self.D_Y, True)
         opt_disc.zero_grad()
         loss_d = self.compute_D_loss(Y, Y_fake)
-        loss_d.backward()
-        opt_disc.step()
+        self.scaler.scale(loss_d).backward(retain_graph=True) 
+        self.scaler.unscale_(opt_disc)
+        self.scaler.step(opt_disc)
 
-        # update G
+        # Mise à jour de G et de Head simultanément
         self.set_requires_grad(self.D_Y, False)
         opt_gen.zero_grad()
         opt_head.zero_grad()
         loss_g = self.compute_G_loss(X, Y, Y_fake, Y_idt)
+        self.scaler.scale(loss_g).backward()
+        self.scaler.unscale_(opt_gen)
+        self.scaler.unscale_(opt_head)
+        self.scaler.step(opt_gen)
+        self.scaler.step(opt_head)
 
-        # if self.current_epoch < self.hparams.warm_up_epochs_diffusor:
-        #     loss_g = loss_g + self.hparams.diffusor_w*self.mse(X_, self.USR.add_speckle_noise(X_x)*mask_fan)
+        # Mise à jour de l'échelle
+        self.scaler.update()
 
-        loss_g.backward()
-        opt_gen.step()
-        opt_head.step()
-
-        
+        # Enregistrer les pertes
         self.log("train_loss_g", loss_g)
         self.log("train_loss_d", loss_d)
+
+    # def training_step(self, train_batch, batch_idx):
+
+    #     # Y is the real ultrasound
+    #     X, Y = train_batch       
+
+    #     opt_gen, opt_disc, opt_head = self.optimizers()
+
+    #     Y_fake = self.G(X)
+
+    #     Y_idt = None
+    #     # if self.hparams.lambda_y:
+    #     #     Y_idt = self.G(Y)      
+
+    #     if getattr(self.hparams, 'lambda_y', 0) > 0:
+    #         Y_idt = self.G(Y)           
+
+    #     # update D
+    #     self.set_requires_grad(self.D_Y, True)
+    #     opt_disc.zero_grad()
+    #     loss_d = self.compute_D_loss(Y, Y_fake)
+    #     loss_d.backward()
+    #     opt_disc.step()
+
+    #     # update G
+    #     self.set_requires_grad(self.D_Y, False)
+    #     opt_gen.zero_grad()
+    #     opt_head.zero_grad()
+    #     loss_g = self.compute_G_loss(X, Y, Y_fake, Y_idt)
+
+    #     loss_g.backward()
+    #     opt_gen.step()
+    #     opt_head.step()
+        
+    #     self.log("train_loss_g", loss_g)
+    #     self.log("train_loss_d", loss_d)
 
     def validation_step(self, val_batch, batch_idx):
 

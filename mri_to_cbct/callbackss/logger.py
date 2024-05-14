@@ -1,4 +1,5 @@
 from pytorch_lightning.callbacks import Callback
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torch
 
@@ -669,76 +670,58 @@ class UltrasoundRenderingDiffLogger(Callback):
                 plt.close()
 
 class CutLogger(Callback):
-    def __init__(self, num_images=8, log_steps=100):
+    def __init__(self, num_images=8, log_steps=100, slice_axis=2):
         self.log_steps = log_steps
         self.num_images = num_images
+        self.slice_axis = slice_axis  # 2 pour l'axe z (sagittal)
+
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, unused=0):
-        
         if batch_idx % self.log_steps == 0:
             with torch.no_grad():
+                cbct, mri = batch  # Supposons que le batch contient des images CBCT et MRI directement
 
-                labeled, x_us = batch
-                x_diff = labeled['img']
-                x_seg = labeled['seg']        
+                # S'assurer que les tenseurs sont dans la bonne dimension
+                if cbct.dim() != 4 or mri.dim() != 4:
+                    print("Les images doivent être en 4D (batch, channel, depth, height, width)")
+                    return
 
-                max_num_image = min(x_seg.shape[0], self.num_images)
+                # Vérifier la dimension de coupe
+                if self.slice_axis >= cbct.dim():
+                    print("L'axe de coupe est incorrect pour les données fournies")
+                    return
 
+                max_num_image = min(cbct.shape[0], self.num_images)
 
-                grid_idx = torch.randint(low=0, high=pl_module.hparams.n_grids - 1, size=(x_seg.shape[0],))
-        
-                grid = pl_module.grid_t[grid_idx]
-                inverse_grid = pl_module.inverse_grid_t[grid_idx]
-                mask_fan = pl_module.mask_fan_t[grid_idx]
+                # Calcul de l'indice de la coupe du milieu sur l'axe z, en vérifiant la dimension
+                if cbct.shape[self.slice_axis] < 1:
+                    print("La dimension de coupe n'a pas de profondeur suffisante")
+                    return
 
-                x_lotus_us = pl_module.USR(x_seg, grid=grid, inverse_grid=inverse_grid, mask_fan=mask_fan)
+                middle_slice_index = cbct.shape[self.slice_axis] // 2
 
-                if hasattr(pl_module, 'autoencoderkl'):
-                    x_lotus_fake = pl_module(x_seg)
-                else:
-                    x_lotus_fake = pl_module.G(pl_module.transform_us(x_lotus_us))
+                # Extraire les coupes du milieu
+                cbct_slice = cbct[:, :, middle_slice_index, :] if self.slice_axis == 2 else cbct[:, :, :, middle_slice_index]
+                mri_slice = mri[:, :, middle_slice_index, :] if self.slice_axis == 2 else mri[:, :, :, middle_slice_index]
 
-                    if isinstance(x_lotus_fake, tuple):
-                        x_lotus_fake = x_lotus_fake[0]
+                # Normalisation pour visualisation
+                cbct_slice = (cbct_slice - torch.min(cbct_slice)) / (torch.max(cbct_slice) - torch.min(cbct_slice))
+                mri_slice = (mri_slice - torch.min(mri_slice)) / (torch.max(mri_slice) - torch.min(mri_slice))
 
-                    x_lotus_fake = x_lotus_fake*mask_fan
-                
-                x_lotus_us = x_lotus_us - torch.min(x_lotus_us)
-                x_lotus_us = x_lotus_us/torch.max(x_lotus_us)
-                x_lotus_fake = torch.clip(x_lotus_fake, min=0.0, max=1.0)
-                
-                x_diff = torch.clip(x_diff, min=0.0, max=1.0)/torch.max(x_diff)                
+                # Suite de votre code pour la visualisation
+                grid_cbct = torchvision.utils.make_grid(cbct_slice[0:max_num_image].unsqueeze(1), nrow=4)
+                grid_mri = torchvision.utils.make_grid(mri_slice[0:max_num_image].unsqueeze(1), nrow=4)
 
-                grid_x_diff = torchvision.utils.make_grid(x_diff[0:max_num_image], nrow=4)
-                fig = plt.figure(figsize=(7, 9))
-                ax = plt.imshow(grid_x_diff.permute(1, 2, 0).cpu().numpy())
-                trainer.logger.experiment["images/x_diffusor"].upload(fig)
-                plt.close()
+                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+                ax1.imshow(grid_cbct.permute(1, 2, 0).cpu().numpy(), cmap='gray')
+                ax1.set_title('CBCT Middle Slice')
+                ax2.imshow(grid_mri.permute(1, 2, 0).cpu().numpy(), cmap='gray')
+                ax2.set_title('MRI Middle Slice')
+                plt.show()
 
-                x_seg = x_seg/torch.max(x_seg)
-                grid_x_label = torchvision.utils.make_grid(x_seg[0:max_num_image], nrow=4)
-                fig = plt.figure(figsize=(7, 9))
-                ax = plt.imshow(grid_x_label.permute(1, 2, 0).cpu().numpy())
-                trainer.logger.experiment["images/x_label"].upload(fig)
-                plt.close()
-
-
-                grid_x_lotus_us = torchvision.utils.make_grid(x_lotus_us[0:max_num_image], nrow=4)
-                fig = plt.figure(figsize=(7, 9))
-                ax = plt.imshow(grid_x_lotus_us.permute(1, 2, 0).cpu().numpy())
-                trainer.logger.experiment["images/x_lotus_us"].upload(fig)
-                plt.close()
-
-                grid_x_lotus_fake = torchvision.utils.make_grid(x_lotus_fake[0:max_num_image], nrow=4)
-                fig = plt.figure(figsize=(7, 9))
-                ax = plt.imshow(grid_x_lotus_fake.permute(1, 2, 0).cpu().numpy())
-                trainer.logger.experiment["images/x_lotus_fake"].upload(fig)
-                plt.close()
-
-                grid_x_us = torchvision.utils.make_grid(x_us[0:max_num_image], nrow=4)                
-                
-                fig = plt.figure(figsize=(7, 9))
-                ax = plt.imshow(grid_x_us.permute(1, 2, 0).cpu().numpy())
-                trainer.logger.experiment["images/x_us"].upload(fig)
+                # Option pour enregistrer dans TensorBoard ou autre système de logging
+                # Exemple pour TensorBoard
+                tb_logger = SummaryWriter(log_dir='path_to_logs')
+                tb_logger.add_figure("cbct_mri_middle_slices", fig, global_step=batch_idx)
                 plt.close()
 
 
