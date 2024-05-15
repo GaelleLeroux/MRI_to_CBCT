@@ -126,7 +126,7 @@ neptune_logger = NeptuneLogger(
 )
 
 LOGGER = getattr(logger, "CutLogger")    
-image_logger = LOGGER(log_steps=100)
+image_logger = LOGGER(log_steps=30)
 callbacks.append(image_logger)
 
 ################################################################################################################################################################3

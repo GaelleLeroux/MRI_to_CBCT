@@ -670,10 +670,10 @@ class UltrasoundRenderingDiffLogger(Callback):
                 plt.close()
 
 class CutLogger(Callback):
-    def __init__(self, num_images=8, log_steps=100, slice_axis=2):
+    def __init__(self, num_images=8, log_steps=30, slice_axis=2):  # 2 pour l'axe z (sagittal)
         self.log_steps = log_steps
         self.num_images = num_images
-        self.slice_axis = slice_axis  # 2 pour l'axe z (sagittal)
+        self.slice_axis = slice_axis
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, unused=0):
         if batch_idx % self.log_steps == 0:
@@ -681,49 +681,56 @@ class CutLogger(Callback):
                 cbct, mri = batch  # Supposons que le batch contient des images CBCT et MRI directement
 
                 # S'assurer que les tenseurs sont dans la bonne dimension
-                if cbct.dim() != 4 or mri.dim() != 4:
-                    print("Les images doivent être en 4D (batch, channel, depth, height, width)")
+                # print("cbct.dim() : ", cbct.dim())
+                # print("mri.dim() : ", mri.dim())
+                # print("cbct.shape : ", cbct.shape)
+                # print("mri.shape : ", mri.shape)
+                if cbct.dim() != 5 or mri.dim() != 5:
+                    print("Les images doivent être en 5D (batch, channel, depth, height, width)")
                     return
+                
+                # Supposons que cbct et mri sont de forme (batch, channel, depth, height, width)
+                # Extraire une coupe du milieu sur l'axe de coupe spécifié
+                middle_slice_index = cbct.shape[self.slice_axis] // 2
 
-                # Vérifier la dimension de coupe
-                if self.slice_axis >= cbct.dim():
+                # Extraire les coupes du milieu
+                if self.slice_axis == 2:
+                    cbct_slice = cbct[:, :, middle_slice_index, :, :]
+                    mri_slice = mri[:, :, middle_slice_index, :, :]
+                elif self.slice_axis == 3:
+                    cbct_slice = cbct[:, :, :, middle_slice_index, :]
+                    mri_slice = mri[:, :, :, middle_slice_index, :]
+                elif self.slice_axis == 4:
+                    cbct_slice = cbct[:, :, :, :, middle_slice_index]
+                    mri_slice = mri[:, :, :, :, middle_slice_index]
+                else:
                     print("L'axe de coupe est incorrect pour les données fournies")
                     return
 
                 max_num_image = min(cbct.shape[0], self.num_images)
 
-                # Calcul de l'indice de la coupe du milieu sur l'axe z, en vérifiant la dimension
-                if cbct.shape[self.slice_axis] < 1:
-                    print("La dimension de coupe n'a pas de profondeur suffisante")
-                    return
-
-                middle_slice_index = cbct.shape[self.slice_axis] // 2
-
-                # Extraire les coupes du milieu
-                cbct_slice = cbct[:, :, middle_slice_index, :] if self.slice_axis == 2 else cbct[:, :, :, middle_slice_index]
-                mri_slice = mri[:, :, middle_slice_index, :] if self.slice_axis == 2 else mri[:, :, :, middle_slice_index]
-
                 # Normalisation pour visualisation
                 cbct_slice = (cbct_slice - torch.min(cbct_slice)) / (torch.max(cbct_slice) - torch.min(cbct_slice))
                 mri_slice = (mri_slice - torch.min(mri_slice)) / (torch.max(mri_slice) - torch.min(mri_slice))
 
-                # Suite de votre code pour la visualisation
                 grid_cbct = torchvision.utils.make_grid(cbct_slice[0:max_num_image].unsqueeze(1), nrow=4)
                 grid_mri = torchvision.utils.make_grid(mri_slice[0:max_num_image].unsqueeze(1), nrow=4)
-
+                print("grid_cbct.shape : ",grid_cbct.shape)
                 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
-                ax1.imshow(grid_cbct.permute(1, 2, 0).cpu().numpy(), cmap='gray')
+
+                # Permute les dimensions correctement avant d'afficher
+                ax1.imshow(grid_cbct[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
                 ax1.set_title('CBCT Middle Slice')
-                ax2.imshow(grid_mri.permute(1, 2, 0).cpu().numpy(), cmap='gray')
+                ax2.imshow(grid_mri[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
                 ax2.set_title('MRI Middle Slice')
-                plt.show()
+                trainer.logger.experiment["images/cbct_mri_comp"].upload(fig)
+                plt.close()
+                # plt.show()
 
                 # Option pour enregistrer dans TensorBoard ou autre système de logging
-                # Exemple pour TensorBoard
-                tb_logger = SummaryWriter(log_dir='path_to_logs')
-                tb_logger.add_figure("cbct_mri_middle_slices", fig, global_step=batch_idx)
-                plt.close()
-
+                # tb_logger = SummaryWriter(log_dir='path_to_logs')
+                # tb_logger.add_figure("cbct_mri_middle_slices", fig, global_step=batch_idx)
+                # plt.close()
 
 class SPADELogger(Callback):
     def __init__(self, num_images=8, log_steps=100):
