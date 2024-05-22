@@ -25,6 +25,7 @@ from monai.transforms import (
     RandAffined,
     ToTensord
 )   
+
 import math
 
 from torch.utils.data import Dataset, DataLoader
@@ -57,15 +58,21 @@ import math
 import pytorch_lightning as pl
 
 
+import neptune.new as neptune
+
+# Initialize Neptune
 
 
-df_train_cbct = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/train.csv") 
-df_val_cbct = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/valid.csv")  
-df_test_cbct = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/test.csv")
+# Proceed with your code
 
-df_train_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/train.csv")
-df_val_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/valid.csv")   
-df_test_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/test.csv") 
+
+df_train_cbct = pd.read_csv("/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/train.csv") 
+df_val_cbct = pd.read_csv("/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/valid.csv")  
+df_test_cbct = pd.read_csv("/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/test.csv")
+
+df_train_mri = pd.read_csv("/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/train.csv")
+df_val_mri = pd.read_csv("/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/valid.csv")   
+df_test_mri = pd.read_csv("/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/test.csv") 
 
 # df_train_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/train.csv") 
 # df_val_mri = pd.read_csv("/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/valid.csv")  
@@ -84,12 +91,12 @@ print("df_train_cbct : ",df_train_cbct)
 train_transform_cbct = LotusTrainTransforms2()
 valid_transform_cbct = LotusTrainTransforms2()
 # CBCT_data = LotusDataModule(df_train_cbct, df_val_cbct, df_test_cbct, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_cbct, valid_transform=valid_transform_cbct, test_transform=valid_transform_cbct, drop_last=False)
-CBCT_data = LotusDataModule(df_train_cbct, df_val_cbct, df_test_cbct, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=1, num_workers=4, img_column="img_fn", train_transform=train_transform_cbct, valid_transform=valid_transform_cbct, test_transform=valid_transform_cbct, drop_last=False)
+CBCT_data = LotusDataModule(df_train_cbct, df_val_cbct, df_test_cbct, mount_point="/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=1, num_workers=4, img_column="img_fn", train_transform=train_transform_cbct, valid_transform=valid_transform_cbct, test_transform=valid_transform_cbct, drop_last=False)
 CBCT_data.setup()
 
 train_transform_mri = LotusTrainTransforms2()
 valid_transform_mri = LotusTrainTransforms2()
-MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/", batch_size=1, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
+MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/", batch_size=1, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
 # MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
 MRI_data.setup()
 
@@ -106,7 +113,7 @@ print("size of concat_data : ",len(concat_data.train_ds))
 ################################################################################################################################################################3
 
 checkpoint_callback = ModelCheckpoint(
-            dirpath='/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/output_model/',
+            dirpath='/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/output_model',
             filename='{epoch}-{val_loss:.2f}',
             save_top_k=2,
             monitor='val_loss'
@@ -121,13 +128,14 @@ os.environ['NEPTUNE_API_TOKEN'] = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1b
 
 neptune_logger = NeptuneLogger(
     project='gaellel/MRICBCT',
-    tags=["v1"],
+    tags=["ordi2"],
     api_key=os.environ['NEPTUNE_API_TOKEN']
 )
+print('neptune_logger output', neptune_logger)
 
 LOGGER = getattr(logger, "CutLogger")    
-image_logger = LOGGER(log_steps=100)
-callbacks.append(image_logger)
+image_logger = LOGGER(log_steps=20)
+# callbacks.append(image_logger)
 
 ################################################################################################################################################################3
 
@@ -135,6 +143,9 @@ callbacks.append(image_logger)
 # image_logger = LOGGER(log_steps=100)
 # callbacks.append(image_logger)
 model = Cut()
+
+
+
 trainer = Trainer(
     logger=neptune_logger,
     log_every_n_steps=100,
@@ -149,6 +160,9 @@ trainer = Trainer(
     # detect_anomaly=True
 )
 
-torch.cuda.empty_cache()
 
+torch.cuda.empty_cache()
+print('concat data type ', type(concat_data))
 trainer.fit(model, datamodule=concat_data)
+
+# neptune_logger.experiment.wait()

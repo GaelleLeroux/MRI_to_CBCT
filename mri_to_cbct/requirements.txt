@@ -1,0 +1,12 @@
+torch
+torchvision
+Pillow
+pandas
+numpy
+monai
+SimpleITK
+neptune
+matplotlib
+pytorch-lightning
+jupyter
+tensorboard
