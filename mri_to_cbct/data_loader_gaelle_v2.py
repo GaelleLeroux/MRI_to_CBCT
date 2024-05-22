@@ -168,9 +168,9 @@ class LotusTrainTransforms2:
         EnsureTyped(keys=['img']),
         RandZoomd(keys=['img'], min_zoom=0.5, max_zoom=1.2, mode=['area'], prob=0.8, padding_mode='constant'),
 
-        RandRotated(keys=['img'], range_x=np.pi/4, mode=['bilinear'], prob=1.0),
+        RandRotated(keys=['img'], range_x=np.pi/8, mode=['bilinear'], prob=1.0),
 
-        RandAffined(keys=['img'], prob=0.8, shear_range=(0.3, 0.3), mode=['bilinear'], padding_mode='zeros'),
+        # RandAffined(keys=['img'], prob=0.8, shear_range=(0.3, 0.3), mode=['bilinear'], padding_mode='zeros'),
 
         Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
 
@@ -194,6 +194,39 @@ class LotusTrainTransforms2:
         #         ToTensor(dtype=torch.float32, track_meta=False)
         #     ]
         # )
+
+
+    # def __call__(self, inp):
+    #     return self.train_transform(inp) 
+    def __call__(self, inp):
+        try:
+            # print("inp : ", inp)
+            # print("key inp : ", inp.keys())
+            y = self.train_transform(inp)
+            return y
+            # img_after = [self.train_transform(inp)["img"]]
+            # return torch.stack([data for data in img_after])
+        
+        except Exception as e:
+            print("Erreur lors de l'application de la transformation:", e)
+            print("Dictionnaire d'entrée :", inp)
+            raise e
+        
+class LotusValidTransforms2:
+    def __init__(self, height: int = 256,size=128, pad=16):
+
+        self.train_transform = Compose(
+            [
+        # LoadImaged(keys=['img']),
+        EnsureChannelFirstd(keys=['img']),
+
+        EnsureTyped(keys=['img']),
+
+        Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
+
+        ToTensord(keys=['img']),
+        ]
+        )
 
 
     # def __call__(self, inp):

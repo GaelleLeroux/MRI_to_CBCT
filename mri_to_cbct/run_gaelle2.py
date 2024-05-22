@@ -5,7 +5,7 @@ from PIL import Image
 import os
 from nets.cut import Cut
 from pytorch_lightning import Trainer
-from data_loader_gaelle_v2 import ConcatDataset,LotusDataModule, ConcatDataModule, LotusTrainTransforms2, CleftDataModule
+from data_loader_gaelle_v2 import ConcatDataset,LotusDataModule, ConcatDataModule, LotusValidTransforms2,LotusTrainTransforms2, CleftDataModule
 import pandas as pd
 import numpy as np 
 
@@ -82,13 +82,13 @@ print("df_train_cbct : ",df_train_cbct)
 
 
 train_transform_cbct = LotusTrainTransforms2()
-valid_transform_cbct = LotusTrainTransforms2()
+valid_transform_cbct = LotusValidTransforms2()
 # CBCT_data = LotusDataModule(df_train_cbct, df_val_cbct, df_test_cbct, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_cbct, valid_transform=valid_transform_cbct, test_transform=valid_transform_cbct, drop_last=False)
 CBCT_data = LotusDataModule(df_train_cbct, df_val_cbct, df_test_cbct, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=1, num_workers=4, img_column="img_fn", train_transform=train_transform_cbct, valid_transform=valid_transform_cbct, test_transform=valid_transform_cbct, drop_last=False)
 CBCT_data.setup()
 
 train_transform_mri = LotusTrainTransforms2()
-valid_transform_mri = LotusTrainTransforms2()
+valid_transform_mri = LotusValidTransforms2()
 MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI/", batch_size=1, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
 # MRI_data = LotusDataModule(df_train_mri, df_val_mri, df_test_mri, mount_point="/home/luciacev/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT/", batch_size=2, num_workers=4, img_column="img_fn", train_transform=train_transform_mri, valid_transform=valid_transform_mri, test_transform=valid_transform_mri, drop_last=False)
 MRI_data.setup()
