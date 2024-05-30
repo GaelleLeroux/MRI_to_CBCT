@@ -62,7 +62,8 @@ from monai.transforms import (
     RandGaussianSmooth,
     NormalizeIntensity,
     ResizeWithPadOrCrop,
-    ToTensor
+    ToTensor,
+    ScaleIntensityRangePercentilesd
 )   
 import math
 
@@ -162,17 +163,18 @@ class LotusTrainTransforms2:
         # )
         self.train_transform = Compose(
             [
-        # LoadImaged(keys=['img']),
         EnsureChannelFirstd(keys=['img']),
 
         EnsureTyped(keys=['img']),
-        RandZoomd(keys=['img'], min_zoom=0.5, max_zoom=1.2, mode=['area'], prob=0.8, padding_mode='constant'),
-
-        RandRotated(keys=['img'], range_x=np.pi/8, mode=['bilinear'], prob=1.0),
-
-        # RandAffined(keys=['img'], prob=0.8, shear_range=(0.3, 0.3), mode=['bilinear'], padding_mode='zeros'),
-
+        RandZoomd(keys=['img'], min_zoom=0.8, max_zoom=1.2, mode=['area'], prob=0.8, padding_mode='constant'),
         Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
+        
+        # RandRotated(keys=['img'], range_x=np.pi/16, mode=['bilinear'], prob=1.0),
+
+        RandAffined(keys=['img'], prob=0.8, shear_range=(0.1, 0.5), mode=['bilinear'], padding_mode='zeros'),
+        ScaleIntensityRangePercentilesd(keys=['img'], lower=0.0, upper=100.0, b_min=0.0, b_max=1.0), 
+
+        
 
         ToTensord(keys=['img']),
         ]
@@ -221,8 +223,10 @@ class LotusValidTransforms2:
         EnsureChannelFirstd(keys=['img']),
 
         EnsureTyped(keys=['img']),
+        
 
         Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
+        ScaleIntensityRangePercentilesd(keys=['img'], lower=0.0, upper=100.0, b_min=0.0, b_max=1.0), 
 
         ToTensord(keys=['img']),
         ]

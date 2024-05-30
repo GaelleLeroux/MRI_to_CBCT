@@ -106,6 +106,7 @@ def main(args):
 
     if args.neptune_tags:
         logger = NeptuneLogger(
+            
             project='ImageMindAnalytics/Lotus',
             tags=args.neptune_tags,
             api_key=os.environ['NEPTUNE_API_TOKEN']

@@ -112,7 +112,7 @@ checkpoint_callback = ModelCheckpoint(
             monitor='val_loss'
         )
 
-early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=30, verbose=True, mode="min")
+early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=50, verbose=True, mode="min")
 
 callbacks=[early_stop_callback, checkpoint_callback]
 neptune_logger = None

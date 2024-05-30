@@ -4,6 +4,7 @@ import torchvision
 import torch
 
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 class MocoImageLogger(Callback):
     def __init__(self, num_images=12, log_steps=100):
@@ -676,54 +677,62 @@ class CutLogger(Callback):
         self.slice_axis = slice_axis
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, unused=0):
+        number = 0
         if batch_idx % self.log_steps == 0:
+            number+=1
             with torch.no_grad():
                 cbct, mri = batch  # Supposons que le batch contient des images CBCT et MRI directement
 
                 # S'assurer que les tenseurs sont dans la bonne dimension
-                # print("cbct.dim() : ", cbct.dim())
-                # print("mri.dim() : ", mri.dim())
-                # print("cbct.shape : ", cbct.shape)
-                # print("mri.shape : ", mri.shape)
                 if cbct.dim() != 5 or mri.dim() != 5:
                     print("Les images doivent être en 5D (batch, channel, depth, height, width)")
                     return
-                
-                # Supposons que cbct et mri sont de forme (batch, channel, depth, height, width)
-                # Extraire une coupe du milieu sur l'axe de coupe spécifié
-                middle_slice_index = cbct.shape[self.slice_axis] // 2
 
-                # Extraire les coupes du milieu
-                if self.slice_axis == 2:
-                    cbct_slice = cbct[:, :, middle_slice_index, :, :]
-                    mri_slice = mri[:, :, middle_slice_index, :, :]
-                elif self.slice_axis == 3:
-                    cbct_slice = cbct[:, :, :, middle_slice_index, :]
-                    mri_slice = mri[:, :, :, middle_slice_index, :]
-                elif self.slice_axis == 4:
-                    cbct_slice = cbct[:, :, :, :, middle_slice_index]
-                    mri_slice = mri[:, :, :, :, middle_slice_index]
-                else:
-                    print("L'axe de coupe est incorrect pour les données fournies")
-                    return
+                def get_middle_slice(data, axis):
+                    middle_slice_index = data.shape[axis] // 2
+                    if axis == 2:
+                        return data[:, :, middle_slice_index, :, :]
+                    elif axis == 3:
+                        return data[:, :, :, middle_slice_index, :]
+                    elif axis == 4:
+                        return data[:, :, :, :, middle_slice_index]
+                    else:
+                        raise ValueError("L'axe de coupe est incorrect pour les données fournies")
+
+                # Extraire les coupes du milieu pour chaque axe
+                middle_slices = {}
+                for axis in [2, 3, 4]:
+                    middle_slices[axis] = {
+                        'cbct': get_middle_slice(cbct, axis),
+                        'mri': get_middle_slice(mri, axis)
+                    }
+
+                # Normalisation pour visualisation
+                for axis in middle_slices:
+                    for modality in ['cbct', 'mri']:
+                        middle_slices[axis][modality] = (middle_slices[axis][modality] - torch.min(middle_slices[axis][modality])) / (torch.max(middle_slices[axis][modality]) - torch.min(middle_slices[axis][modality]))
 
                 max_num_image = min(cbct.shape[0], self.num_images)
 
-                # Normalisation pour visualisation
-                cbct_slice = (cbct_slice - torch.min(cbct_slice)) / (torch.max(cbct_slice) - torch.min(cbct_slice))
-                mri_slice = (mri_slice - torch.min(mri_slice)) / (torch.max(mri_slice) - torch.min(mri_slice))
+                fig, axes = plt.subplots(3, 2, figsize=(15, 15))
+                titles = ['CBCT Axis 2', 'MRI Axis 2', 'CBCT Axis 3', 'MRI Axis 3', 'CBCT Axis 4', 'MRI Axis 4']
 
-                grid_cbct = torchvision.utils.make_grid(cbct_slice[0:max_num_image].unsqueeze(1), nrow=4)
-                grid_mri = torchvision.utils.make_grid(mri_slice[0:max_num_image].unsqueeze(1), nrow=4)
-                print("grid_cbct.shape : ",grid_cbct.shape)
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+                for i, axis in enumerate([2, 3, 4]):
+                    cbct_slice = middle_slices[axis]['cbct']
+                    mri_slice = middle_slices[axis]['mri']
 
-                # Permute les dimensions correctement avant d'afficher
-                ax1.imshow(grid_cbct[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
-                ax1.set_title('CBCT Middle Slice')
-                ax2.imshow(grid_mri[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
-                ax2.set_title('MRI Middle Slice')
-                trainer.logger.experiment["images/cbct_mri_comp"].upload(fig)
+                    grid_cbct = torchvision.utils.make_grid(cbct_slice[0:max_num_image].unsqueeze(1), nrow=4)
+                    grid_mri = torchvision.utils.make_grid(mri_slice[0:max_num_image].unsqueeze(1), nrow=4)
+                    
+                    axes[i, 0].imshow(grid_cbct[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
+                    axes[i, 0].set_title(titles[2 * i])
+                    axes[i, 0].axis('off')
+                    
+                    axes[i, 1].imshow(grid_mri[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
+                    axes[i, 1].set_title(titles[2 * i + 1])
+                    axes[i, 1].axis('off')
+
+                trainer.logger.experiment[f"images/cbct_mri_{number}"].upload(fig)
                 plt.close()
                 # plt.show()
 

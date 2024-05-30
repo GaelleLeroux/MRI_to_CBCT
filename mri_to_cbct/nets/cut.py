@@ -17,7 +17,7 @@ from torchvision import transforms as T
 
 
 class Cut(pl.LightningModule):
-    def __init__(self, lambda_y=0.0,**kwargs):
+    def __init__(self, lambda_y=1.0,**kwargs):
         super().__init__()
 
         self.save_hyperparameters()
@@ -34,11 +34,17 @@ class Cut(pl.LightningModule):
 
         self.scaler = torch.cuda.amp.GradScaler()#add by gl
 
+        print("lambda_y : ",getattr(self.hparams, 'lambda_y', 0))
+
 
     def configure_optimizers(self):
-        lr = getattr(self.hparams, 'lr', 0.0002)
+        lr = getattr(self.hparams, 'lr', 0.0001)
         betas = getattr(self.hparams, 'betas', (0.5, 0.999))
         weight_decay = getattr(self.hparams, 'weight_decay', 0.0001)
+
+        print("lr : ",lr)
+        print("betas : ",betas)
+        print("weight_decay : ",weight_decay)
         
         opt_gen = optim.AdamW(
             self.G.parameters(),
