@@ -212,8 +212,7 @@ class LotusTrainTransforms2:
             print("Erreur lors de l'application de la transformation:", e)
             print("Dictionnaire d'entrée :", inp)
             raise e
-<<<<<<< Updated upstream
-=======
+
         
 class LotusValidTransforms2:
     def __init__(self, height: int = 256,size=128, pad=16):
@@ -282,7 +281,7 @@ class LotusEvalTransforms:
             print("Erreur lors de l'application de la transformation:", e)
             print("Dictionnaire d'entrée :", inp)
             raise e
->>>>>>> Stashed changes
+
 
    
 
