@@ -23,7 +23,8 @@ from monai.transforms import (
     RandZoomd,
     RandRotated,
     RandAffined,
-    ToTensord
+    ToTensord,
+    ScaleIntensityRangePercentilesd
 )   
 import math
 
@@ -211,6 +212,77 @@ class LotusTrainTransforms2:
             print("Erreur lors de l'application de la transformation:", e)
             print("Dictionnaire d'entrée :", inp)
             raise e
+<<<<<<< Updated upstream
+=======
+        
+class LotusValidTransforms2:
+    def __init__(self, height: int = 256,size=128, pad=16):
+
+        self.train_transform = Compose(
+            [
+        # LoadImaged(keys=['img']),
+        EnsureChannelFirstd(keys=['img']),
+
+        EnsureTyped(keys=['img']),
+
+        Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
+
+        ToTensord(keys=['img']),
+        ]
+        )
+
+
+    # def __call__(self, inp):
+    #     return self.train_transform(inp) 
+    def __call__(self, inp):
+        try:
+            # print("inp : ", inp)
+            # print("key inp : ", inp.keys())
+            y = self.train_transform(inp)
+            return y
+            # img_after = [self.train_transform(inp)["img"]]
+            # return torch.stack([data for data in img_after])
+        
+        except Exception as e:
+            print("Erreur lors de l'application de la transformation:", e)
+            print("Dictionnaire d'entrée :", inp)
+            raise e
+        
+class LotusEvalTransforms:
+    def __init__(self, height: int = 256,size=128, pad=16):
+
+        self.train_transform = Compose(
+            [
+        # LoadImaged(keys=['img']),
+        EnsureChannelFirstd(keys=['img']),
+
+        EnsureTyped(keys=['img']),
+        
+
+        Resized(keys=['img'], spatial_size=(128, 128, 128)),  # Redimensionne les images
+        ScaleIntensityRangePercentilesd(keys=['img'], lower=0.0, upper=100.0, b_min=0.0, b_max=1.0), 
+
+        ToTensord(keys=['img']),
+        ]
+        )
+
+
+    # def __call__(self, inp):
+    #     return self.train_transform(inp) 
+    def __call__(self, inp):
+        try:
+            # print("inp : ", inp)
+            # print("key inp : ", inp.keys())
+            y = self.train_transform(inp)
+            return y
+            # img_after = [self.train_transform(inp)["img"]]
+            # return torch.stack([data for data in img_after])
+        
+        except Exception as e:
+            print("Erreur lors de l'application de la transformation:", e)
+            print("Dictionnaire d'entrée :", inp)
+            raise e
+>>>>>>> Stashed changes
 
    
 
@@ -244,6 +316,7 @@ class LotusDataset(Dataset):
         # print("type d : ", type(d))
         # print("size d[img] : ", d["img"].size())
         # print("number key : ", len(d.keys()))
+        return d
         
         return d["img"]
     
