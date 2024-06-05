@@ -54,7 +54,7 @@ class Cut(pl.LightningModule):
         )
         opt_disc = optim.AdamW(
             self.D_Y.parameters(),
-            lr=lr,
+            lr=1e-8,
             betas=betas,
             weight_decay=weight_decay
         )        
@@ -106,29 +106,50 @@ class Cut(pl.LightningModule):
         # Générer Y_idt si nécessaire
         Y_idt = self.G(Y) if getattr(self.hparams, 'lambda_y', 0) > 0 else None
 
-        # Mise à jour de D
+        # # Mise à jour de D
+        # self.set_requires_grad(self.D_Y, True)
+        # opt_disc.zero_grad()
+        # loss_d = self.compute_D_loss(Y, Y_fake)
+        # self.scaler.scale(loss_d).backward(retain_graph=True) 
+        # self.scaler.unscale_(opt_disc)
+        # self.scaler.step(opt_disc)
+
+        # # Mise à jour de G et de Head simultanément
+        # self.set_requires_grad(self.D_Y, False)
+        # opt_gen.zero_grad()
+        # opt_head.zero_grad()
+        # loss_g = self.compute_G_loss(X, Y, Y_fake, Y_idt)
+        # self.scaler.scale(loss_g).backward()
+        # self.scaler.unscale_(opt_gen)
+        # self.scaler.unscale_(opt_head)
+        # self.scaler.step(opt_gen)
+        # self.scaler.step(opt_head)
+
+        # # Mise à jour de l'échelle
+        # self.scaler.update()
+
+        # # Enregistrer les pertes
+        # self.log("train_loss_g", loss_g)
+        # self.log("train_loss_d", loss_d)
+
+        # update D
         self.set_requires_grad(self.D_Y, True)
         opt_disc.zero_grad()
         loss_d = self.compute_D_loss(Y, Y_fake)
-        self.scaler.scale(loss_d).backward(retain_graph=True) 
-        self.scaler.unscale_(opt_disc)
-        self.scaler.step(opt_disc)
+        loss_d.backward()
+        opt_disc.step()
 
-        # Mise à jour de G et de Head simultanément
+        # update G
         self.set_requires_grad(self.D_Y, False)
         opt_gen.zero_grad()
         opt_head.zero_grad()
         loss_g = self.compute_G_loss(X, Y, Y_fake, Y_idt)
-        self.scaler.scale(loss_g).backward()
-        self.scaler.unscale_(opt_gen)
-        self.scaler.unscale_(opt_head)
-        self.scaler.step(opt_gen)
-        self.scaler.step(opt_head)
 
-        # Mise à jour de l'échelle
-        self.scaler.update()
+        loss_g.backward()
+        opt_gen.step()
+        opt_head.step()
 
-        # Enregistrer les pertes
+        
         self.log("train_loss_g", loss_g)
         self.log("train_loss_d", loss_d)
 
