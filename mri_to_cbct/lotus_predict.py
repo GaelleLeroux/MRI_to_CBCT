@@ -95,7 +95,7 @@ if __name__ == '__main__':
       
     input_group.add_argument('--model', help='Model with trained weights', type=str, required=True)
            
-    input_group.add_argument('--mount_point', help='Dataset mount directory', type=str, default="/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_CBCT")    
+    input_group.add_argument('--mount_point', help='Dataset mount directory', type=str, default="/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT/training_MRI")    
     input_group.add_argument('--num_workers', help='Number of workers for loading', type=int, default=1)
     input_group.add_argument('--csv', required=True, type=str, help='Test CSV')
     input_group.add_argument('--img_column', type=str, default="img_fn", help='Column name for image')   
