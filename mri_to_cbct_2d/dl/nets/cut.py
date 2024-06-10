@@ -48,7 +48,7 @@ class Cut(pl.LightningModule):
         )
         opt_disc = optim.AdamW(
             self.D_Y.parameters(),
-            lr=lr,
+            lr=1e-6,
             betas=betas,
             weight_decay=weight_decay
         )        

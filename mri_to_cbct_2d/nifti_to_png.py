@@ -3,7 +3,7 @@ import os
 from PIL import Image
 import argparse
 
-def create_png(nii_gz_file_path,output_dir,filename,slice,transpose,flip_h):
+def create_png(nii_gz_file_path,output_dir,filename,slice,transpose,flip_h,min_p,max_p):
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -17,8 +17,8 @@ def create_png(nii_gz_file_path,output_dir,filename,slice,transpose,flip_h):
     # Itérer sur la troisième dimension (z) pour sauvegarder chaque tranche
     print("image_data.shape[slice] : ",image_data.shape[slice])
     
-    min = int(image_data.shape[slice]*0.0)
-    max = int(image_data.shape[slice]*0.7)
+    min = int(image_data.shape[slice]*min_p)
+    max = int(image_data.shape[slice]*max_p)
     print("min : ",min)
     print("max : ",max)
     for z in range(min,max):
@@ -63,17 +63,19 @@ def main(args):
         base_name = os.path.basename(file)  
         file_name_without_extension = os.path.splitext(os.path.splitext(base_name)[0])[0]
         # output_folder = os.path.join(output_general,file_name_without_extension)
-        create_png(file,output_general,file_name_without_extension,args.slice,args.transpose,args.flip_h)
+        create_png(file,output_general,file_name_without_extension,args.slice,args.transpose,args.flip_h,args.min,args.max)
     print("All the files has been treated")
     
     
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Get nifti info')
-    parser.add_argument('--input', type=str, default='/home/luciacev/Documents/Gaelle/Data/MultimodelReg/2D_Training/z06_center/label/', help='Input folder')
-    parser.add_argument('--output', type=str, default='/home/luciacev/Documents/Gaelle/Data/MultimodelReg/2D_Training/LabelsTr/', help='Output directory tosave the png')
-    parser.add_argument('--slice', type=int, default=2, help='Slice to keep, mri:2, cbct:0')
+    parser.add_argument('--input', type=str, default='/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT_2D/a0_training_CBCT/test', help='Input folder')
+    parser.add_argument('--output', type=str, default='/home/lucia/Documents/Gaelle/Data/MultimodelReg/MRI_to_CBCT_2D/a1_training_CBCT_2D/test', help='Output directory tosave the png')
+    parser.add_argument('--slice', type=int, default=0, help='Slice to keep, mri:2, cbct:0')
     parser.add_argument('--transpose',type=bool,default=False,help='if output image need to be transpose (for mri)')
     parser.add_argument('--flip_h',type=bool,default=True,help='if output image need to be flip horizontally (for cbct)')
+    parser.add_argument('--min',type=float,default=0.0,help='mri=cbct=0.0')
+    parser.add_argument('--max',type=float,default=0.2,help='mri:1.0  cbct:0.5')
     args = parser.parse_args()
 
 

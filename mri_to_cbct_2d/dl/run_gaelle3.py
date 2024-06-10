@@ -58,6 +58,9 @@ import pytorch_lightning as pl
 
 import argparse
 
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')
+
 torch.set_float32_matmul_precision('medium')
 def main(args):
 
